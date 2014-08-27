@@ -27,6 +27,21 @@ for my $id ($odoo->model('res.partner')->search) {
 }
 ```
 
+You can also reuse an entire connection config by creating a file with a hash ref and referencing that like so
+
+```perl
+# config.pl
+{
+    host   => 'localhost',
+    user   => 'admin',
+    passwd => 'password',
+    dbname => 'openerp_db'
+}
+
+# odoo.pl
+my $odoo = Odoo::Lite->new(config => 'config.pl');
+```
+
 # METHODS
 
 ## connect
