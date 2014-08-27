@@ -156,6 +156,40 @@ In the example above, C<$models> now contains a brand new instance, but using th
 
 Please see the L<Odoo::Lite::Functions> module for the API method sugar.
 
+=head1 DEFINITIONS
+
+Say you don't want a bunch of ugly multidimensional array searches in your code. You can separate these into 
+definition modules. Odoo::Lite comes with a simple one called Odoo::Lite::Definitions, but you can make your own..
+
+  package My::Odoo::Definitions;
+
+  use Odoo::Lite 'Definition';
+
+  has_def 'companies' => (
+      as      => 'res.partner',
+      default => sub {
+          my ($self) = @_;
+          return $self->search(['is_company', '=', 1]);
+      },
+  );
+
+You can call the definition module whatever you like, then to use it, just pass it to the constructor
+
+  my $odoo = Odoo::Lite->new(
+      host   => 'localhost',
+      user   => 'admin',
+      passwd => 'password',
+      dbname => 'openerp_db',
+      definitions => 'My::Odoo::Definitions',
+  )->connect;
+
+  $odoo->model('res.partner');
+    
+  for my $id ($odoo->companies) {
+      if (my $comp = $odoo->find($id)) {
+          say $comp->{name};
+  }
+
 =head1 AUTHOR
 
 Brad Haywood <brad@geeksware.com>
