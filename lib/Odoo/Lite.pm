@@ -21,7 +21,7 @@ sub import {
         my $caller = caller;
         importdefs: {
             no strict 'refs';
-            *{"${caller}::has_def"} = \&_has;
+            *{"${caller}::has_def"} = \&_has_def;
         }
     }
 }
@@ -53,7 +53,7 @@ sub BUILDARGS {
     if ($defs) {
         eval "use $defs";
         if ($@) {
-            die "Failed to import definition module $defs";
+            die "Failed to import definition module $defs: $@";
         }
     }
  
