@@ -15,6 +15,51 @@ has 'passwd' => ( is => 'ro', required => 1 );
 has 'dbname' => ( is => 'ro', required => 1 );
 has 'port'   => ( is => 'ro', default => sub { 8069 } );
 
+sub import {
+    my ($class, $arg) = @_;
+    if ($arg and $arg eq 'Definition') {
+        my $caller = caller;
+        importdefs: {
+            no strict 'refs';
+            *{"${caller}::has_def"} = \&_has;
+        }
+    }
+}
+
+sub _has_def {
+    my ($method, %args) = @_;
+    my $as      = delete $args{as};
+    my $default = delete $args{default};
+    
+    if ($as and $default) {
+        importdef: {
+            no strict 'refs';
+            *{"Odoo::Lite::${method}"} = sub {
+                my ($self, $args) = @_;
+                unless ($self->_model eq $as) {
+                    die "Definition requires model '$as'";
+                }
+
+                $default->($self, $args);
+            };
+        }
+    }
+}
+
+sub BUILDARGS {
+    my ($class, %args) = @_;
+    my $defs = delete $args{definitions};
+    
+    if ($defs) {
+        eval "use $defs";
+        if ($@) {
+            die "Failed to import definition module $defs";
+        }
+    }
+ 
+    return \%args;
+}
+
 sub connect {
     my ($self, %args) = @_;
     my $port = $self->port;
