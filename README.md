@@ -89,6 +89,19 @@ has_def 'companies' => (
         return $self->search(['is_company', '=', 1]);
     },
 );
+
+has_def 'employees' => (
+    as      => 'res.partner',
+    default => sub {
+        my ($self, $company) = @_;
+        unless ($company->{is_company}) {
+            warn $company->{name} . " is not a valid company!";
+            return 0;
+        }
+
+        return @{$company->{child_ids}};
+    },
+);
 ```
 
 You can call the definition module whatever you like, then to use it, just pass it to the constructor
@@ -103,10 +116,16 @@ my $odoo = Odoo::Lite->new(
 )->connect;
 
 $odoo->model('res.partner');
-  
+
 for my $id ($odoo->companies) {
     if (my $comp = $odoo->find($id)) {
         say $comp->{name};
+        for my $cid ($odoo->employees($comp)) {
+            if (my $employee = $odoo->find($cid)) {
+                say " - " . $employee->{name} . " <" . $employee->{email} . ">";
+            }
+        }
+    }
 }
 ```
 
