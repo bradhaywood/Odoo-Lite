@@ -48,6 +48,12 @@ sub _has_def {
 
 sub BUILDARGS {
     my ($class, %args) = @_;
+    my $conf = delete $args{config};
+    if ($conf) {
+        my $config = do "$conf";
+        map { $args{$_} = $config->{$_} } keys %$config;
+    }
+    
     my $defs = delete $args{definitions};
     
     if ($defs) {
@@ -129,6 +135,19 @@ This module attempts to make interfacing with the Odoo RPC-XML API extremely eas
           say $user->{email};
       }
   }
+
+You can also reuse an entire connection config by creating a file with a hash ref and referencing that like so
+
+  # config.pl
+  {
+      host   => 'localhost',
+      user   => 'admin',
+      passwd => 'password',
+      dbname => 'openerp_db'
+  }
+
+  # odoo.pl
+  my $odoo = Odoo::Lite->new(config => 'config.pl');
 
 =head1 METHODS
 
