@@ -4,6 +4,7 @@ our $VERSION = '0.001';
 
 use Moo;
 use Frontier::Client;
+use JSON::RPC::Client;
 extends 'Odoo::Lite::Functions';
 
 has '_model'  => ( is => 'rw' );
@@ -14,7 +15,13 @@ has 'user'   => ( is => 'ro', required => 1 );
 has 'passwd' => ( is => 'ro', required => 1 );
 has 'dbname' => ( is => 'ro', required => 1 );
 has 'port'   => ( is => 'ro', default => sub { 8069 } );
-
+has 'proto'  => ( is => 'ro', default => sub { 'xmlrpc' } );
+has 'jid'    => ( is => 'rw', default => sub { 1 } );
+has 'base'   => ( is => 'rw', default => sub { "http://localhost:8069" } );
+has 'context' => ( is => 'rw', default => sub { {} } );
+has 'session_id' => ( is => 'rw' );
+has '_uid' => ( is => 'rw' );
+                
 sub import {
     my ($class, $arg) = @_;
     if ($arg and $arg eq 'Definition') {
@@ -24,6 +31,34 @@ sub import {
             *{"${caller}::has_def"} = \&_has_def;
         }
     }
+
+    # could not find a way to get JSON::RPC::Client to set headers
+    # for the cookie, so let's hack^H^H^H^Hfix it
+    fixjsonrpc: {
+        no strict 'refs';
+        no warnings 'redefine';
+        *{"JSON::RPC::Client::new"} = sub {
+            my $proto = shift;
+            my $headers = shift;
+            my $self  = bless {}, (ref $proto ? ref $proto : $proto);
+
+            my $ua  = LWP::UserAgent->new(
+                agent   => 'JSON::RPC::Client/' . $JSON::RPC::Client::VERSION . ' beta ',
+                timeout => 10,
+            );
+
+            if ($headers) {
+                $ua->default_header(%{$headers});
+            }
+
+            $self->ua($ua);
+            $self->json( $proto->create_json_coder );
+            $self->version('1.1');
+            $self->content_type('application/json');
+
+            return $self;
+        };
+    } #endfixjsorpc
 }
 
 sub _has_def {
@@ -73,12 +108,45 @@ sub connect {
     my $user = $self->user;
     my $pass = $self->passwd;
     my $dbname = $self->dbname;
+    my $proto  = $self->proto;
 
     if ($user and $pass and $host and $port and $dbname) {
-        my $server = Frontier::Client->new({ url => "http://${host}:${port}/xmlrpc/common" });
-        my $server_object = Frontier::Client->new({ url => "http://${host}:${port}/xmlrpc/object" });
-        $self->_server($server);
-        $self->_server_object($server_object);
+        if ($proto eq 'jsonrpc') {
+            $self->_server(JSON::RPC::Client->new);
+            my $auth = {
+                db       => $dbname,
+                login    => $user,
+                password => $pass,
+                base_location => "http://${host}:${port}",
+                context  => {},
+            };
+            
+            my $uri = "http://${host}:${port}/web/session/authenticate";
+            my $res = $self->_server->call(
+                $uri,
+                {
+                    id => $self->jid,
+                    jsonrpc => '2.0',
+                    method  => 'call',
+                    params  => $auth,
+                }
+            );
+        
+            if (exists $res->{content}->{result}->{user_context}) {
+                $self->base("http://${host}:${port}");
+                $self->context($res->{content}->{result}->{user_context});
+                $self->session_id($res->{content}->{result}->{session_id});
+                $self->_uid($res->{content}->{result}->{uid});
+                $self->_server(JSON::RPC::Client->new({ 'Cookie' => 'session_id=' . $self->session_id }));
+            } else {
+                die "Failed to connect to jsonrpc";
+            } 
+        } else {
+            my $server = Frontier::Client->new({ url => "http://${host}:${port}/xmlrpc/common" });
+            my $server_object = Frontier::Client->new({ url => "http://${host}:${port}/xmlrpc/object" });
+            $self->_server($server);
+            $self->_server_object($server_object);
+        }
     } else {
         die "Missing parameters";
     }

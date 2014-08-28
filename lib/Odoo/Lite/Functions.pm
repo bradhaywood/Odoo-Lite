@@ -17,6 +17,7 @@ This is where the methods for API calls to Odoo happen. Most of these methods wi
 our $VERSION = '0.001';
 
 use Moo;
+use Odoo::Lite::Result;
 
 =head2 uid
 
@@ -37,6 +38,45 @@ sub uid {
 }
 
 sub _execute {
+    my $self = shift;
+    if ($self->proto eq 'jsonrpc') {
+        $self->_execute_jsonrpc(@_);
+    } else {
+        $self->_execute_xmlrpc(@_);
+    }
+}
+
+sub _execute_jsonrpc {
+    my ($self, $method, $fields, $domain, $offset, $limit) = @_;
+    $offset //= 0;
+    $limit //= 0;
+    my $uri = $self->base . "/web/dataset/" . $method;
+    my $res = $self->_server->call(
+        $uri, 
+        {
+            id      => $self->_uid,
+            jsonrpc => '2.0',
+            method  => 'call',
+            params  => {
+                context => $self->context,
+                domain  => [ $domain ], 
+                model   => $self->_model,
+                fields  => $fields,
+                offset  => $offset,
+                limit   => $limit,
+            },
+        }
+    );
+
+    if ($res->is_success) {
+        return Odoo::Lite::Result->new(
+            size    => $res->{content}->{result}->{length},
+            records => $res->{content}->{result}->{records},
+        );        
+    }
+}
+
+sub _execute_xmlrpc {
     my ($self, $method, @args) = @_;
     $self->_model_check();
 
@@ -61,7 +101,20 @@ Retrieves an object based on a single id
 =cut
 
 sub find {
-    my ($self, $id) = @_;
+    my ($self, $fields, $id) = @_;
+    if ($self->proto eq 'jsonrpc') {
+        my $f =  $self->search_read(
+            $fields,
+            ['id', '=', $id],
+            0,
+            1
+        );
+
+        if ($f->size > 0) {
+            return $f->all->[0];
+        }
+    }
+
     return $self->_execute('read', $id); 
 }
 
@@ -84,8 +137,17 @@ on where its target variable is to be held.
 
 =cut
 
+sub search_read {
+    my ($self, $fields, $args, $offset, $limit) = @_;
+    $self->_execute('search_read', $fields, $args, $offset, $limit);
+}
+
 sub search {
-    my ($self, $args, $offset, $limit) = @_;
+    my ($self, $fields, $args, $offset, $limit) = @_;
+    if ($self->proto eq 'jsonrpc') {
+        return $self->search_read($fields, $args, $offset, $limit);
+    }
+
     my $res;
     if ($args) {
         if ($limit) {
