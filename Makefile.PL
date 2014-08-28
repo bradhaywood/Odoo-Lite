@@ -29,6 +29,7 @@ build_requires (
 );
 
 requires (
+   'JSON::RPC::Client' => 0,
    'Frontier::Client' => 0,
    'Moo' => 0,
 );
