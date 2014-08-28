@@ -16,7 +16,7 @@ This is where the methods for API calls to Odoo happen. Most of these methods wi
 
 our $VERSION = '0.001';
 
-use Moo;
+use Mouse;
 use Odoo::Lite::Result;
 
 =head2 uid
@@ -50,29 +50,57 @@ sub _execute_jsonrpc {
     my ($self, $method, $fields, $domain, $offset, $limit) = @_;
     $offset //= 0;
     $limit //= 0;
-    unless (ref $domain->[0] eq 'ARRAY') { $domain = [ $domain ]; }
+    
+    if ($method eq 'search_read') {
+        unless (ref $domain->[0] eq 'ARRAY') { $domain = [ $domain ]; }
+    } 
+   
+    my $uid = $self->_uid;
+    my %args = (
+        id      => $uid,
+        jsonrpc => '2.0',
+        method  => 'call',
+        params  => {
+            context => $self->context,
+            domain  => $domain, 
+            model   => $self->_model,
+            fields  => $fields,
+            offset  => $offset,
+            limit   => $limit,
+        },
+    );
+
+    if ($method eq 'write') {
+        delete $args{params}{fields};
+        delete $args{params}{domain};
+        delete $args{params}{offset};
+        delete $args{params}{limit};
+        my $context = delete $args{params}{context};
+        $args{params}{args} = [$fields, $domain];
+        $args{params}{kwargs}{context} = $context;
+        $args{params}{method} = 'write';
+    }
+
     my $uri = $self->base . "/web/dataset/" . $method;
+    if ($method eq 'write') { $uri = $self->base . "/web/dataset/call_kw/" . $self->_model . "/${method}"; }
+
     my $res = $self->_server->call(
         $uri, 
-        {
-            id      => $self->_uid,
-            jsonrpc => '2.0',
-            method  => 'call',
-            params  => {
-                context => $self->context,
-                domain  => $domain, 
-                model   => $self->_model,
-                fields  => $fields,
-                offset  => $offset,
-                limit   => $limit,
-            },
-        }
+        \%args,
     );
 
     if ($res->is_success) {
         return Odoo::Lite::Result->new(
             size    => $res->{content}->{result}->{length},
             records => $res->{content}->{result}->{records},
+            dbname  => $self->dbname,
+            host    => $self->host,
+            user    => $self->user,
+            passwd  => $self->passwd,
+            _server => $self->_server,
+            _uid    => $self->_uid,
+            context => $self->context,
+            _model  => $self->_model,
         );        
     }
 }
