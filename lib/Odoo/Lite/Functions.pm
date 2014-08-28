@@ -142,7 +142,7 @@ sub find {
         );
 
         if ($f->size > 0) {
-            return $f->all->[0];
+            return $f->first;
         }
     }
 
