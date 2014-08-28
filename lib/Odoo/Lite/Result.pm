@@ -5,7 +5,7 @@ extends 'Odoo::Lite::Functions';
 with 'Odoo::Lite::Common';
 
 has 'size'       => ( is => 'ro' );
-has 'records'    => ( is => 'ro', default => sub { [] } );
+has 'records'    => ( is => 'rw', default => sub { [] } );
 
 sub all {
     my ($self) = @_;
@@ -22,6 +22,15 @@ sub first {
 
 sub update {
     my ($self, $args) = @_;
+    my $new_records = $self->records;
+    for (my $i = 0; $i < @{$self->records}; $i++) {
+        for my $key (keys %$args) {
+            $new_records->[$i]->{$key} = $args->{$key};
+        }
+    }
+    
+    $self->records($new_records);
+
     $self->_execute_jsonrpc(
         'write',
         [ map { $_->{id} } @{$self->records} ],

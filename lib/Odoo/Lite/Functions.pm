@@ -89,10 +89,12 @@ sub _execute_jsonrpc {
         \%args,
     );
 
+    my $size = ref $res->result eq 'HASH' ? $res->result->{length} : 0;
+    my $records = ref $res->result eq 'HASH' ? $res->result->{records} : [];
     if ($res->is_success) {
         return Odoo::Lite::Result->new(
-            size    => $res->{content}->{result}->{length},
-            records => $res->{content}->{result}->{records},
+            size    => $size, 
+            records => $records, 
             dbname  => $self->dbname,
             host    => $self->host,
             user    => $self->user,
