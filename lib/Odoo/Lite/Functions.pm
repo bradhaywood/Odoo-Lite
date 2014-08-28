@@ -50,6 +50,7 @@ sub _execute_jsonrpc {
     my ($self, $method, $fields, $domain, $offset, $limit) = @_;
     $offset //= 0;
     $limit //= 0;
+    unless (ref $domain->[0] eq 'ARRAY') { $domain = [ $domain ]; }
     my $uri = $self->base . "/web/dataset/" . $method;
     my $res = $self->_server->call(
         $uri, 
@@ -59,7 +60,7 @@ sub _execute_jsonrpc {
             method  => 'call',
             params  => {
                 context => $self->context,
-                domain  => [ $domain ], 
+                domain  => $domain, 
                 model   => $self->_model,
                 fields  => $fields,
                 offset  => $offset,
