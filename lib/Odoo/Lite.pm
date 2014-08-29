@@ -57,8 +57,9 @@ sub _has_def {
             no strict 'refs';
             *{"Odoo::Lite::${method}"} = sub {
                 my ($self, $args) = @_;
+                if (not $self->_model) { $self->_model($as); }
                 unless ($self->_model eq $as) {
-                    die "Definition requires model '$as'";
+                    $self->_model($as);
                 }
 
                 $default->($self, $args);
