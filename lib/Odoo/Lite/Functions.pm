@@ -46,13 +46,18 @@ sub _execute {
     }
 }
 
+sub _execute_workflow {
+    my ($self, $type, $id) = @_;
+    $self->_execute_jsonrpc('exec_workflow', $type, $id);
+}
+
 sub _execute_jsonrpc {
     my ($self, $method, $fields, $domain, $offset, $limit) = @_;
     $offset //= 0;
     $limit //= 0;
     $fields //= [];
     $domain //= []; 
-    my @call_kw = qw<write read fields_get>;
+    my @call_kw = qw<write read fields_get exec_workflow>;
  
     if ($method eq 'search_read') {
         unless (ref $domain->[0] eq 'ARRAY') { $domain = [ $domain ]; }
@@ -84,10 +89,20 @@ sub _execute_jsonrpc {
             if (/write/) { $args{params}{args} = [$fields, $domain]; }
             elsif (/read/) { $args{params}{args} = [$domain, $fields]; }
             elsif (/fields_get/) { $args{params}{args} = []; }
+            elsif (/exec_workflow/) {
+                $args{params}{args} = [ $fields, $domain ];
+                    #id => $domain,
+                    #signal => $fields,
+                #};
+            }
         }
         $args{params}{kwargs}{context} = $context;
         $args{params}{method} = $method;
+        
         $uri = $self->base . "/web/dataset/call_kw/" . $self->_model . "/${method}";
+        if ($method eq 'exec_workflow') { $uri = $self->base . "/web/exec_workflow/" . $self->_model . "/${fields}"; }
+        
+        use Data::Dumper; warn Dumper(\%args);
     }
 
     my $res = $self->_server->call(
@@ -95,6 +110,7 @@ sub _execute_jsonrpc {
         \%args,
     );
 
+    die Dumper($res);
     my $size = ref $res->result eq 'HASH' ? $res->result->{length} : 0;
     my $records = ref $res->result eq 'HASH' ? $res->result->{records} : [];
     if ($method eq 'read') { $records = $res->result; }
@@ -315,6 +331,11 @@ sub field_names {
     my ($self) = @_;
     my $fields = $self->_execute('fields_get');
     return [ map { $_ } keys %{$fields} ];
+}
+
+sub exec_workflow {
+    my ($self, $type, $id) = @_;
+    $self->_execute_workflow($type, $id);
 }
 
 =head1 AUTHOR
