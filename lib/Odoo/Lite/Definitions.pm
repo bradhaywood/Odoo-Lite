@@ -17,10 +17,10 @@ has_def 'employees' => (
     as      => 'res.partner',
     default => sub {
         my ($self, $company) = @_;
-        #unless ($company->{is_company}) {
-        #    warn $company->{name} . " is not a valid company!";
-        #    return 0;
-        #}
+        unless ($company->{is_company}) {
+            warn $company->{name} . " is not a valid company!";
+            return 0;
+        }
 
         if ($self->proto eq 'jsonrpc') {
         }

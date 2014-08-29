@@ -50,7 +50,10 @@ sub _execute_jsonrpc {
     my ($self, $method, $fields, $domain, $offset, $limit) = @_;
     $offset //= 0;
     $limit //= 0;
-    
+    $fields //= [];
+    $domain //= []; 
+    my @call_kw = qw<write read fields_get>;
+ 
     if ($method eq 'search_read') {
         unless (ref $domain->[0] eq 'ARRAY') { $domain = [ $domain ]; }
     } 
@@ -70,19 +73,22 @@ sub _execute_jsonrpc {
         },
     );
 
-    if ($method eq 'write') {
+    my $uri = $self->base . "/web/dataset/" . $method;
+    if (grep { $method eq $_ } @call_kw) {
         delete $args{params}{fields};
         delete $args{params}{domain};
         delete $args{params}{offset};
         delete $args{params}{limit};
         my $context = delete $args{params}{context};
-        $args{params}{args} = [$fields, $domain];
+        for ($method) {
+            if (/write/) { $args{params}{args} = [$fields, $domain]; }
+            elsif (/read/) { $args{params}{args} = [$domain, $fields]; }
+            elsif (/fields_get/) { $args{params}{args} = []; }
+        }
         $args{params}{kwargs}{context} = $context;
-        $args{params}{method} = 'write';
+        $args{params}{method} = $method;
+        $uri = $self->base . "/web/dataset/call_kw/" . $self->_model . "/${method}";
     }
-
-    my $uri = $self->base . "/web/dataset/" . $method;
-    if ($method eq 'write') { $uri = $self->base . "/web/dataset/call_kw/" . $self->_model . "/${method}"; }
 
     my $res = $self->_server->call(
         $uri, 
@@ -91,6 +97,8 @@ sub _execute_jsonrpc {
 
     my $size = ref $res->result eq 'HASH' ? $res->result->{length} : 0;
     my $records = ref $res->result eq 'HASH' ? $res->result->{records} : [];
+    if ($method eq 'read') { $records = $res->result; }
+    if ($method eq 'fields_get') { return $res->result; }
     if ($res->is_success) {
         return Odoo::Lite::Result->new(
             size    => $size, 
@@ -134,16 +142,18 @@ Retrieves an object based on a single id
 sub find {
     my ($self, $fields, $id) = @_;
     if ($self->proto eq 'jsonrpc') {
-        my $f =  $self->search_read(
-            $fields,
-            ['id', '=', $id],
-            0,
-            1
-        );
+        #my $f =  $self->search_read(
+        #    $fields,
+        #    ['id', '=', $id],
+        #    0,
+        #    1
+        #);
 
-        if ($f->size > 0) {
-            return $f->first;
-        }
+        #if ($f->size > 0) {
+        #    return $f->first;
+        #}
+
+        return $self->_execute_jsonrpc('read', $fields, $id);
     }
 
     return $self->_execute('read', $id); 
@@ -299,6 +309,12 @@ Retrieve information on the models fields
 sub fields {
     my ($self) = @_;
     return $self->_execute('fields_get');
+}
+
+sub field_names {
+    my ($self) = @_;
+    my $fields = $self->_execute('fields_get');
+    return [ map { $_ } keys %{$fields} ];
 }
 
 =head1 AUTHOR

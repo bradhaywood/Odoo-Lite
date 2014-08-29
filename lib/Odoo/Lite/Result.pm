@@ -16,7 +16,7 @@ sub all {
 
 sub first {
     my ($self) = @_;
-    if ($self->size > 0) { return $self->records->[0]; }
+    if (@{$self->records}) { return $self->records->[0]; }
     return 0;
 }
 
