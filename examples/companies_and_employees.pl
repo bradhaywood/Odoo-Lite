@@ -14,13 +14,15 @@ my $odoo = Odoo::Lite->new(
     definitions => 'Odoo::Lite::Definitions',
 )->connect;
 
-$odoo->model('res.partner');
+my $companies = $odoo->companies;
 
-for my $c ($odoo->companies->all) {
-    say $c->{name};
-    for my $e ($odoo->employees($c)) {
-        if (my $user = $odoo->find(['name'], $e)) {
-            say " - $user->{name}";
+for my $company ($companies->all) {
+    say $company->{name};
+    for my $employee ($odoo->employees($company, ['name'])) {
+        if ($odoo->is_result($employee)) {
+            say " - " . $employee->first->{name};
+        } else {
+            say " - No employee(s) found";
         }
     }
 }
