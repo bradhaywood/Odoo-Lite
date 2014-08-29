@@ -164,6 +164,12 @@ sub _model_check {
         unless $self->_model;
 }
 
+sub is_result {
+    my ($self, $obj) = @_;
+    if (ref $obj eq 'Odoo::Lite::Result') { return 1; }
+    return;
+}
+
 =head1 NAME
 
 Odoo::Lite - Odoo API calls made easy
