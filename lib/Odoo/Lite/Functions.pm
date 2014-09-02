@@ -57,7 +57,7 @@ sub _execute_jsonrpc {
     $limit //= 0;
     $fields //= [];
     $domain //= []; 
-    my @call_kw = qw<write read fields_get exec_workflow>;
+    my @call_kw = qw<write read fields_get create exec_workflow unlink>;
  
     if ($method eq 'search_read') {
         unless (ref $domain->[0] eq 'ARRAY') { $domain = [ $domain ]; }
@@ -95,6 +95,8 @@ sub _execute_jsonrpc {
                     #signal => $fields,
                 #};
             }
+            elsif (/create/) { $args{params}{args} = [ $fields ]; }
+            elsif (/unlink/) { $args{params}{args} = [ $fields ]; }
         }
         $args{params}{kwargs}{context} = $context;
         $args{params}{method} = $method;
@@ -102,7 +104,6 @@ sub _execute_jsonrpc {
         $uri = $self->base . "/web/dataset/call_kw/" . $self->_model . "/${method}";
         if ($method eq 'exec_workflow') { $uri = $self->base . "/web/exec_workflow/" . $self->_model . "/${fields}"; }
         
-        use Data::Dumper; warn Dumper(\%args);
     }
 
     my $res = $self->_server->call(
@@ -110,11 +111,11 @@ sub _execute_jsonrpc {
         \%args,
     );
 
-    die Dumper($res);
     my $size = ref $res->result eq 'HASH' ? $res->result->{length} : 0;
     my $records = ref $res->result eq 'HASH' ? $res->result->{records} : [];
     if ($method eq 'read') { $records = $res->result; }
     if ($method eq 'fields_get') { return $res->result; }
+    if ($method eq 'create') { return $res->{content}->{result}; }
     if ($res->is_success) {
         return Odoo::Lite::Result->new(
             size    => $size, 
@@ -251,7 +252,9 @@ Returns the new object on creation
       
 sub create {
     my ($self, $args) = @_;
-    return $self->find($self->_execute('create', $args));
+    my @keys   = map { $_ } keys %$args;
+    my $create_id = $self->_execute_jsonrpc('create', $args);
+    return $self->find(\@keys, $create_id)->records;
 }
 
 =head2 delete

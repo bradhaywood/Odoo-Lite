@@ -19,6 +19,7 @@ my $companies = $odoo->companies;
 for my $company ($companies->all) {
     say $company->{name};
     for my $employee ($odoo->employees($company, ['name'])) {
+        warn Dumper($employee);
         if ($odoo->is_result($employee)) {
             say " - " . $employee->first->{name};
         } else {

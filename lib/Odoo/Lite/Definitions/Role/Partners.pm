@@ -3,6 +3,17 @@ package Odoo::Lite::Definitions::Role::Partners;
 use Mouse::Role;
 use Odoo::Lite 'Definition';
 
+has_def 'partners'  => (
+    as      => 'res.partner',
+    default => sub {
+        my ($self, $fields) = @_;
+        return $self->search(
+            $fields,
+            ['id', '>', 0],
+        );
+    },
+);
+
 has_def 'companies' => (
     as      => 'res.partner',
     default => sub {
@@ -34,6 +45,22 @@ has_def 'employees' => (
         }
 
         return @{$company->{child_ids}};
+    },
+);
+
+has_def 'company' => (
+    as      => 'res.partner',
+    default => sub {
+        my ($self, $user) = @_;
+        my $fields = [ map { $_ } keys %$user ];
+        unless ($user->{parent_id}) {
+            die "Can't retrieve company for " . $user->{name} . " without parent_id being set!";
+        }
+
+        return $self->search(
+            $fields,
+            [['is_company', '=', 1], ['id', '=', $user->{parent_id}->[0]]],
+        )->first;
     },
 );
 

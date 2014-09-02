@@ -3,7 +3,6 @@ package Odoo::Lite;
 our $VERSION = '0.001';
 
 use Mouse;
-use Frontier::Client;
 use JSON::RPC::Client;
 extends 'Odoo::Lite::Functions';
 with 'Odoo::Lite::Common';
@@ -128,11 +127,6 @@ sub connect {
             } else {
                 die "Failed to connect to jsonrpc";
             } 
-        } else {
-            my $server = Frontier::Client->new({ url => "http://${host}:${port}/xmlrpc/common" });
-            my $server_object = Frontier::Client->new({ url => "http://${host}:${port}/xmlrpc/object" });
-            $self->_server($server);
-            $self->_server_object($server_object);
         }
     } else {
         die "Missing parameters";
