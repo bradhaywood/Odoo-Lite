@@ -64,5 +64,13 @@ has_def 'company' => (
     },
 );
 
+has_def 'user_accounts' => (
+    as      => 'res.partner',
+    default => sub {
+        my ($self, $user, $fields) = @_;
+        return $self->accounts($user->{id}, $fields);
+    },
+);
+
 1;
 __END__
