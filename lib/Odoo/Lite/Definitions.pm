@@ -5,6 +5,7 @@ with qw/
     Odoo::Lite::Definitions::Role::Partners
     Odoo::Lite::Definitions::Role::Products
     Odoo::Lite::Definitions::Role::Accounts
+    Odoo::Lite::Definitions::Role::Users
     Odoo::Lite::Definitions::Role::Sales
 /;
 
