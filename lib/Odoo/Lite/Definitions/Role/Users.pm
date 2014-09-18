@@ -6,7 +6,8 @@ use Odoo::Lite 'Definition';
 has_def 'authenticate' => (
     as      => 'res.users',
     default => sub {
-        my ($self, $email, $pass) = @_;
+        my ($self, $args) = @_;
+        my ($email, $pass) = ( $args->{username}, $args->{password} );
         my $check = $self->search(
             [qw/
                 signup_valid
@@ -36,7 +37,7 @@ has_def 'authenticate' => (
                 display_name
                 password
             /],
-            [['email', '=', $email], ['password', '=', $pass]],
+            [['login', '=', $email], ['password', '=', $pass]],
         );
         
         if ($check->size > 0) { return $check->first; }

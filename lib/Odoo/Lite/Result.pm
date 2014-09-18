@@ -23,17 +23,22 @@ sub first {
 sub update {
     my ($self, $args) = @_;
     my $new_records = $self->records;
-    for (my $i = 0; $i < @{$self->records}; $i++) {
-        for my $key (keys %$args) {
-            $new_records->[$i]->{$key} = $args->{$key};
-        }
-    }
+    #for (my $i = 0; $i < @{$self->records}; $i++) {
+    #    for my $key (keys %$args) {
+    #        $new_records->[$i]->{$key} = $args->{$key};
+    #    }
+    #}
     
+    foreach my $key (keys %{$self->records}) {
+        $new_records->{$key} = $args->{$key};
+    }
+
     $self->records($new_records);
 
     $self->_execute_jsonrpc(
         'write',
-        [ map { $_->{id} } @{$self->records} ],
+        #[ map { $_->{id} } @{$self->records} ],
+        [ $self->records->{id} ],
         $args,
     );
 }
