@@ -4,6 +4,7 @@ our $VERSION = '0.001';
 
 use Mouse;
 use JSON::RPC::Client;
+use parent 'Clone';
 extends 'Odoo::Lite::Functions';
 with 'Odoo::Lite::Common';
 
@@ -141,16 +142,7 @@ sub model {
     return $self;
 }
 
-sub clone {
-    my ($self) = @_;
-    return Odoo::Lite->new(
-        host => $self->host,
-        user => $self->user,
-        passwd => $self->passwd,
-        dbname => $self->dbname,
-        port => $self->port
-    )->connect;
-}
+sub clone { bless { %{ $_[0] } }, ref $_[0]; }
 
 sub _model_check {
     my ($self) = @_;
