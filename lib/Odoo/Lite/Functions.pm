@@ -106,6 +106,17 @@ sub _execute_jsonrpc {
         
     }
 
+    if ($method eq 'authenticate') {
+        $uri = $self->base . '/web/session/authenticate';
+        delete $args{params};
+        $args{params} = {
+            'login' => $fields->[0],
+            'password' => $fields->[1],
+            'db' => $self->dbname,
+            'base_location' => $self->base,
+        };
+    }
+
     my $res = $self->_server->call(
         $uri, 
         \%args,
@@ -116,6 +127,7 @@ sub _execute_jsonrpc {
     if ($method eq 'read') { $records = $res->result; }
     if ($method eq 'fields_get') { return $res->result; }
     if ($method eq 'create') { return $res->{content}->{result}; }
+    if ($method eq 'authenticate') { return $res->{content}->{result}; }
     if ($res->is_success) {
         return Odoo::Lite::Result->new(
             size    => $size, 
