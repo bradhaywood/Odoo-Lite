@@ -89,12 +89,7 @@ sub _execute_jsonrpc {
             if (/write/) { $args{params}{args} = [$fields, $domain]; }
             elsif (/read/) { $args{params}{args} = [$domain, $fields]; }
             elsif (/fields_get/) { $args{params}{args} = []; }
-            elsif (/exec_workflow/) {
-                $args{params}{args} = [ $fields, $domain ];
-                    #id => $domain,
-                    #signal => $fields,
-                #};
-            }
+            elsif (/exec_workflow/) { $args{params}{args} = [ $fields, $domain ]; }
             elsif (/create/) { $args{params}{args} = [ $fields ]; }
             elsif (/unlink/) { $args{params}{args} = [ $fields ]; }
         }
@@ -122,6 +117,12 @@ sub _execute_jsonrpc {
         \%args,
     );
 
+    if ($res->{content} and $res->{content}->{error}) {
+        $self->error($res->{content}->{error});
+        return $self;
+    } 
+
+    $self->error('');
     my $size = ref $res->result eq 'HASH' ? $res->result->{length} : 0;
     my $records = ref $res->result eq 'HASH' ? $res->result->{records} : [];
     if ($method eq 'read') { $records = $res->result; }
@@ -266,6 +267,7 @@ sub create {
     my ($self, $args) = @_;
     my @keys   = map { $_ } keys %$args;
     my $create_id = $self->_execute_jsonrpc('create', $args);
+    return if $self->error ne '';
     return $self->find(\@keys, $create_id)->records;
 }
 

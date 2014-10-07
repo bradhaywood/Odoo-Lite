@@ -16,6 +16,6 @@ has 'base'   => ( is => 'rw', default => sub { "http://localhost:8069" } );
 has 'context' => ( is => 'rw', default => sub { {} } );
 has 'session_id' => ( is => 'rw' );
 has '_uid' => ( is => 'rw' );
-
+has 'error' => ( is => 'rw' );
 1;
 __END__
